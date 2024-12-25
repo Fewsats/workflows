@@ -25,6 +25,10 @@ inputs:
     description: "Skip checkout of repo.  Useful when the repo checkout needs to be customized by the calling workflow."
     required: false
     default: 'false'
+  env_vars:
+    description: 'JSON string of environment variables to set during test'
+    required: false
+    default: '{}'
 
 runs:
   using: "composite"
@@ -43,6 +47,7 @@ runs:
         SKIP_TEST: ${{ inputs.skip_test }}
         FLAGS: ${{ inputs.flags }}
         TORCH_CPU: "${{ inputs.torch_cpu }}"
+        ENV_VARS: ${{ inputs.env_vars }}
       shell: bash
       run: |
         set -ux
@@ -84,6 +89,10 @@ runs:
           git diff
           exit 1;
         fi
+        # Set custom environment variables
+        echo "$ENV_VARS" | jq -r 'to_entries | .[] | "export \(.key)=\(.value)"' | while read -r line; do
+          eval $line
+        done
         if [ ! $SKIP_TEST ]; then
           nbdev_test --flags "$FLAGS"
         fi
